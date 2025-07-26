@@ -30,7 +30,7 @@ export default function SuperviseSwarm() {
         className="border p-2 mb-4 block w-full h-32"
       />
       <button onClick={startSession} className="bg-blue-500 text-white p-2 mr-2">Launch Session</button>
-      <button onClick={continueSession} disabled={!sessionId} className="bg-yellow-500 text-white p-2">Resume</button>
+      <button onClick={continueSession} disabled={!sessionId} className="bg-amber-600 text-white p-2">Resume</button>
       
       <h2 className="text-xl mt-4">Session Logs</h2>
       <div className="border p-4 bg-gray-100">

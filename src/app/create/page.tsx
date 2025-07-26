@@ -8,7 +8,9 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CompactAgentSelector } from '@/components/compact-agent-selector';
-import { createSwarm, saveSwarm, getAgents } from '@/app/actions';
+import { PromptEnhancer } from '@/components/prompt-enhancer';
+import { CompatibilityCheck } from '@/components/compatibility-check';
+import { createSwarm, saveSwarm, getAgents, enhanceSwarmPrompt, checkSwarmCompatibility } from '@/app/actions';
 import { ArrowLeft, Layers, Save, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
@@ -30,9 +32,14 @@ export default function CreateSwarm() {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
+    setValue,
   } = useForm<SwarmFormData>({
     resolver: zodResolver(swarmSchema),
   });
+
+  const watchName = watch("name");
+  const watchMainPrompt = watch("mainPrompt");
 
   useEffect(() => {
     async function loadAgents() {
@@ -108,12 +115,12 @@ export default function CreateSwarm() {
         </div>
 
         {availableAgents.length === 0 && (
-          <Card className="glass border-yellow-500/20 mb-6">
+          <Card className="glass border-amber-500/20 mb-6">
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500 mt-0.5" />
                 <div>
-                  <p className="font-medium text-yellow-600 dark:text-yellow-400">No agents available</p>
+                  <p className="font-medium text-amber-700 dark:text-amber-400">No agents available</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     You need to create some agents first before you can build a swarm.
                   </p>
@@ -171,14 +178,20 @@ export default function CreateSwarm() {
               />
 
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Supervisor Prompt
-                </label>
-                <textarea
-                  {...register("mainPrompt")}
-                  rows={6}
-                  className="w-full px-4 py-2 rounded-md border border-input bg-background resize-none"
+                <PromptEnhancer
+                  label="Supervisor Prompt"
+                  value={watchMainPrompt || ""}
+                  onChange={(value) => setValue("mainPrompt", value)}
                   placeholder="Describe the main task for the supervisor to orchestrate. The supervisor will delegate to the selected agents based on this prompt..."
+                  rows={6}
+                  onEnhance={async () => {
+                    const result = await enhanceSwarmPrompt(
+                      watchMainPrompt || "",
+                      watchName || "Swarm",
+                      selectedAgents
+                    )
+                    return result.enhancedPrompt
+                  }}
                 />
                 {errors.mainPrompt && (
                   <p className="text-sm text-destructive mt-1">{errors.mainPrompt.message}</p>
@@ -187,6 +200,20 @@ export default function CreateSwarm() {
                   This prompt will guide the supervisor in delegating tasks to your selected agents
                 </p>
               </div>
+
+              <CompatibilityCheck
+                disabled={!watchMainPrompt || selectedAgents.length === 0}
+                onCheck={async () => {
+                  // Get full agent data for compatibility check
+                  const fullAgents = selectedAgents.map(agentName => {
+                    const agent = availableAgents.find(a => a.name === agentName);
+                    return agent || { name: agentName, description: '', systemPrompt: '', tools: [] };
+                  });
+                  
+                  const result = await checkSwarmCompatibility(watchMainPrompt || "", fullAgents);
+                  return result;
+                }}
+              />
 
               <div className="flex gap-4">
                 <Button 

@@ -8,7 +8,8 @@ import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CompactToolSelector } from "@/components/compact-tool-selector"
-import { saveAgent } from "@/app/actions"
+import { PromptEnhancer } from "@/components/prompt-enhancer"
+import { saveAgent, enhanceAgentPrompt } from "@/app/actions"
 import { ArrowLeft, Bot, Save } from "lucide-react"
 import Link from "next/link"
 
@@ -29,9 +30,14 @@ export default function NewAgentPage() {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
+    setValue,
   } = useForm<AgentFormData>({
     resolver: zodResolver(agentSchema),
   })
+
+  const watchName = watch("name")
+  const watchSystemPrompt = watch("systemPrompt")
 
   const onSubmit = async (data: AgentFormData) => {
     setSaving(true)
@@ -125,14 +131,20 @@ export default function NewAgentPage() {
               />
 
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  System Prompt
-                </label>
-                <textarea
-                  {...register("systemPrompt")}
-                  rows={8}
-                  className="w-full px-4 py-2 rounded-md border border-input bg-background resize-none"
+                <PromptEnhancer
+                  label="System Prompt"
+                  value={watchSystemPrompt || ""}
+                  onChange={(value) => setValue("systemPrompt", value)}
                   placeholder="Define the agent's role, expertise, and behavior..."
+                  rows={8}
+                  onEnhance={async () => {
+                    const result = await enhanceAgentPrompt(
+                      watchSystemPrompt || "",
+                      watchName || "Agent",
+                      selectedTools
+                    )
+                    return result.enhancedPrompt
+                  }}
                 />
                 {errors.systemPrompt && (
                   <p className="text-sm text-destructive mt-1">{errors.systemPrompt.message}</p>
