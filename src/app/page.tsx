@@ -1,103 +1,169 @@
-import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowRight, Cpu, Layers, Play, Users, Sparkles, Zap } from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-purple-500/10 animate-gradient"></div>
+      <div className="absolute top-20 left-10 w-72 h-72 bg-cyan-500/20 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "2s" }}></div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      <div className="relative z-10 container mx-auto px-4 py-8">
+        {/* Hero section */}
+        <div className="text-center mb-12">
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <Cpu className="h-20 w-20 text-cyan-500 animate-pulse-ring" />
+              <div className="absolute inset-0 bg-cyan-500/30 blur-2xl"></div>
+            </div>
+          </div>
+          <h1 className="text-6xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 bg-clip-text text-transparent animate-gradient">
+            Claude Swarm Supervisor
+          </h1>
+          <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-8">
+            Orchestrate intelligent AI agent swarms with the power of Claude Code SDK. 
+            Build, manage, and deploy collaborative AI teams.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Link href="/create">
+              <Button size="lg" className="neon-cyan group">
+                <Sparkles className="h-5 w-5 mr-2 group-hover:animate-spin" />
+                Get Started
+                <ArrowRight className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+            <Link href="/projects">
+              <Button size="lg" variant="outline" className="border-cyan-500/50 hover:bg-cyan-500/10">
+                View Projects
+              </Button>
+            </Link>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Feature cards */}
+        <div className="grid gap-8 md:grid-cols-3 mb-12 max-w-6xl mx-auto">
+          <Card className="glass border-cyan-500/20 hover:border-cyan-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/10 group">
+            <CardHeader>
+              <div className="mb-4">
+                <div className="relative inline-block">
+                  <Users className="h-12 w-12 text-cyan-500 group-hover:scale-110 transition-transform" />
+                  <div className="absolute inset-0 bg-cyan-500/20 blur-xl"></div>
+                </div>
+              </div>
+              <CardTitle className="text-2xl">Intelligent Agents</CardTitle>
+              <CardDescription className="text-base">
+                Create specialized AI agents with unique capabilities
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">
+                Design agents with specific roles, tools, and expertise. Each agent can focus on what they do best.
+              </p>
+              <Link href="/agents">
+                <Button variant="link" className="p-0 text-cyan-500 hover:text-cyan-400">
+                  Explore Agents <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className="glass border-blue-500/20 hover:border-blue-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10 group">
+            <CardHeader>
+              <div className="mb-4">
+                <div className="relative inline-block">
+                  <Layers className="h-12 w-12 text-blue-500 group-hover:scale-110 transition-transform" />
+                  <div className="absolute inset-0 bg-blue-500/20 blur-xl"></div>
+                </div>
+              </div>
+              <CardTitle className="text-2xl">Dynamic Swarms</CardTitle>
+              <CardDescription className="text-base">
+                Orchestrate teams of agents working in harmony
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">
+                Combine multiple agents into powerful swarms that collaborate to solve complex problems.
+              </p>
+              <Link href="/swarms">
+                <Button variant="link" className="p-0 text-blue-500 hover:text-blue-400">
+                  Manage Swarms <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className="glass border-purple-500/20 hover:border-purple-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10 group">
+            <CardHeader>
+              <div className="mb-4">
+                <div className="relative inline-block">
+                  <Zap className="h-12 w-12 text-purple-500 group-hover:scale-110 transition-transform" />
+                  <div className="absolute inset-0 bg-purple-500/20 blur-xl"></div>
+                </div>
+              </div>
+              <CardTitle className="text-2xl">Real-time Sessions</CardTitle>
+              <CardDescription className="text-base">
+                Launch and control swarm executions live
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">
+                Watch as your AI agents collaborate in real-time, delegating tasks and sharing insights.
+              </p>
+              <Link href="/supervise">
+                <Button variant="link" className="p-0 text-purple-500 hover:text-purple-400">
+                  Start Session <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Quick actions */}
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold mb-8 bg-gradient-to-r from-cyan-500 to-purple-600 bg-clip-text text-transparent">
+            Quick Actions
+          </h2>
+          <div className="flex flex-wrap gap-4 justify-center">
+            <Link href="/create">
+              <Button variant="outline" className="border-cyan-500/50 hover:bg-cyan-500/10">
+                <Sparkles className="h-4 w-4 mr-2" />
+                Create New Swarm
+              </Button>
+            </Link>
+            <Link href="/agents/new">
+              <Button variant="outline" className="border-blue-500/50 hover:bg-blue-500/10">
+                <Users className="h-4 w-4 mr-2" />
+                Design Agent
+              </Button>
+            </Link>
+            <Link href="/supervise">
+              <Button variant="outline" className="border-purple-500/50 hover:bg-purple-500/10">
+                <Play className="h-4 w-4 mr-2" />
+                Launch Session
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Stats section */}
+        <div className="grid gap-6 md:grid-cols-3 max-w-3xl mx-auto">
+          <div className="text-center">
+            <div className="text-4xl font-bold text-cyan-500 mb-2 animate-glow">∞</div>
+            <p className="text-muted-foreground">Possible Configurations</p>
+          </div>
+          <div className="text-center">
+            <div className="text-4xl font-bold text-blue-500 mb-2 animate-glow">100%</div>
+            <p className="text-muted-foreground">Claude-Powered</p>
+          </div>
+          <div className="text-center">
+            <div className="text-4xl font-bold text-purple-500 mb-2 animate-glow">24/7</div>
+            <p className="text-muted-foreground">AI Collaboration</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

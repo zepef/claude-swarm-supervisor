@@ -1,12 +1,13 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-
-const inter = Inter({ subsets: ['latin'] });
+import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono';
+import { ThemeProvider } from '@/components/theme-provider';
+import { Header } from '@/components/header';
 
 export const metadata: Metadata = {
   title: 'Claude Swarm Supervisor',
-  description: 'Manage Claude Code sub-agent swarms',
+  description: 'Create and manage AI agent swarms using the Anthropic Claude Code SDK',
 };
 
 export default function RootLayout({
@@ -15,13 +16,21 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <nav className="p-4 bg-gray-800 text-white">
-          <a href="/create" className="mr-4">Create Swarm</a>
-          <a href="/supervise">Supervise Swarm</a>
-        </nav>
-        {children}
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${GeistSans.variable} ${GeistMono.variable} font-sans`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <div className="min-h-screen">
+            <Header />
+            <main className="grid-background">
+              {children}
+            </main>
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   );

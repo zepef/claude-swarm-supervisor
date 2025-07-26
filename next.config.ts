@@ -13,6 +13,12 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
+  turbopack: {
+    resolveAlias: {
+      fs: { browser: './src/lib/empty.js' },
+      child_process: { browser: './src/lib/empty.js' }
+    }
+  }
 };
 
 export default nextConfig;
