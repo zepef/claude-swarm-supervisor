@@ -6,16 +6,31 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
 const AVAILABLE_TOOLS = [
+  // Core Claude Code Tools
   { id: "Bash", name: "Bash", category: "System" },
   { id: "Edit", name: "Edit", category: "Files" },
   { id: "Read", name: "Read", category: "Files" },
   { id: "Write", name: "Write", category: "Files" },
+  { id: "MultiEdit", name: "Multi Edit", category: "Files" },
   { id: "Grep", name: "Grep", category: "Search" },
   { id: "Glob", name: "Glob", category: "Search" },
+  { id: "LS", name: "List Files", category: "Search" },
   { id: "WebFetch", name: "Web Fetch", category: "Web" },
   { id: "WebSearch", name: "Web Search", category: "Web" },
   { id: "Task", name: "Task", category: "Agent" },
-  { id: "TodoWrite", name: "Todo Write", category: "Org" }
+  { id: "TodoWrite", name: "Todo Write", category: "Organization" },
+  { id: "ExitPlanMode", name: "Exit Plan Mode", category: "System" },
+  { id: "NotebookRead", name: "Notebook Read", category: "Organization" },
+  { id: "NotebookEdit", name: "Notebook Edit", category: "Organization" },
+  
+  // MCP Tools (if installed)
+  { id: "mcp__supabase__list_projects", name: "Supabase: List Projects", category: "MCP Database" },
+  { id: "mcp__supabase__execute_sql", name: "Supabase: Execute SQL", category: "MCP Database" },
+  { id: "mcp__supabase__list_tables", name: "Supabase: List Tables", category: "MCP Database" },
+  { id: "mcp__shadcn-ui-server__list_shadcn_components", name: "Shadcn: List Components", category: "MCP UI" },
+  { id: "mcp__shadcn-ui-server__get_component_details", name: "Shadcn: Component Details", category: "MCP UI" },
+  { id: "mcp__vibe_kanban__list_projects", name: "Kanban: List Projects", category: "MCP Project" },
+  { id: "mcp__vibe_kanban__create_task", name: "Kanban: Create Task", category: "MCP Project" },
 ]
 
 interface CompactToolSelectorProps {
@@ -143,7 +158,14 @@ export function CompactToolSelector({ selectedTools, onToolsChange }: CompactToo
                           ${isSelected ? 'text-cyan-600 dark:text-cyan-400' : ''}
                         `}
                       >
-                        <span>{tool.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span>{tool.name}</span>
+                          {tool.id.startsWith("mcp__") && (
+                            <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                              MCP
+                            </Badge>
+                          )}
+                        </div>
                         {isSelected && <Check className="h-4 w-4" />}
                       </button>
                     )

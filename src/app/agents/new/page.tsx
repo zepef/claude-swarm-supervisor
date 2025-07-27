@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CompactToolSelector } from "@/components/compact-tool-selector"
 import { PromptEnhancer } from "@/components/prompt-enhancer"
+import { MCPToolSuggestions } from "@/components/mcp-tool-suggestions"
 import { saveAgent, enhanceAgentPrompt } from "@/app/actions"
 import { ArrowLeft, Bot, Save } from "lucide-react"
 import Link from "next/link"
@@ -32,11 +33,13 @@ export default function NewAgentPage() {
     formState: { errors },
     watch,
     setValue,
+    getValues,
   } = useForm<AgentFormData>({
     resolver: zodResolver(agentSchema),
   })
 
   const watchName = watch("name")
+  const watchDescription = watch("description")
   const watchSystemPrompt = watch("systemPrompt")
 
   const onSubmit = async (data: AgentFormData) => {
@@ -128,6 +131,15 @@ export default function NewAgentPage() {
               <CompactToolSelector 
                 selectedTools={selectedTools}
                 onToolsChange={setSelectedTools}
+              />
+
+              <MCPToolSuggestions
+                agent={{
+                  name: watchName || "",
+                  description: watchDescription || "",
+                  tools: selectedTools,
+                  systemPrompt: watchSystemPrompt || ""
+                }}
               />
 
               <div>

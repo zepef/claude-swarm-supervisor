@@ -9,6 +9,7 @@ const AGENTS_DIR = path.join(process.cwd(), 'temp-agents');
 const SAVED_AGENTS_FILE = path.join(process.cwd(), '.saved-agents.json');
 const SAVED_SWARMS_FILE = path.join(process.cwd(), '.saved-swarms.json');
 const PROMPTS_LOG_FILE = path.join(process.cwd(), 'prompts.md');
+const MCP_CONFIG_FILE = path.join(process.cwd(), '.mcp.json');
 
 fs.ensureDirSync(AGENTS_DIR);
 
@@ -333,6 +334,152 @@ Return ONLY the enhanced prompt text, nothing else.`;
   } catch (error) {
     console.error('Error enhancing prompt:', error);
     return { enhancedPrompt: basicPrompt }; // Fallback to original
+  }
+}
+
+// MCP Tool Detection and Search
+export async function getInstalledMCPTools() {
+  try {
+    if (await fs.pathExists(MCP_CONFIG_FILE)) {
+      const config = await fs.readJson(MCP_CONFIG_FILE);
+      return Object.keys(config.mcpServers || {});
+    }
+    return [];
+  } catch (error) {
+    console.error('Error reading MCP config:', error);
+    return [];
+  }
+}
+
+export async function searchMCPTools(toolNames: string[]) {
+  const searchPrompt = `You are the Tool Discovery Agent. Search for MCP (Model Context Protocol) tools/servers that match these capabilities: ${toolNames.join(', ')}. 
+
+Use web search to find:
+1. NPM packages that are MCP servers (search "mcp-server npm ${toolNames.join(' OR ')}")
+2. GitHub repositories implementing MCP servers
+3. The official MCP server registry at github.com/modelcontextprotocol/servers
+
+For each relevant tool found, provide in this exact JSON format:
+{
+  "tools": [
+    {
+      "name": "Human-readable tool name",
+      "packageName": "npm-package-name",
+      "description": "What this MCP server does",
+      "installCommand": "npx -y package-name",
+      "isOfficial": true/false,
+      "category": "database|api|files|web|dev|other"
+    }
+  ],
+  "summary": "Brief summary of search results"
+}`;
+
+  try {
+    const gen = query({
+      prompt: searchPrompt,
+      options: {
+        maxTokens: 1500,
+        appendSystemPrompt: "You must search the web for MCP tools and return results in the specified JSON format.",
+      },
+    });
+
+    let searchResults = '';
+    for await (const msg of gen) {
+      if (msg.type === 'assistant' && Array.isArray(msg.message.content)) {
+        searchResults += msg.message.content.map((block: { type: string; text?: string }) => block.text || '').join('');
+      }
+    }
+
+    // Log the search
+    await logPromptCompletion(
+      'searchMCPTools',
+      { toolNames },
+      searchPrompt,
+      searchResults.trim()
+    );
+
+    // Parse JSON results
+    try {
+      const jsonMatch = searchResults.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          foundTools: parsed.tools || [],
+          searchSummary: parsed.summary || searchResults.substring(0, 500)
+        };
+      }
+    } catch (parseError) {
+      console.error('Error parsing tool search results:', parseError);
+    }
+
+    // Fallback: return summary only
+    return {
+      foundTools: [],
+      searchSummary: searchResults.substring(0, 500)
+    };
+  } catch (error) {
+    console.error('Error searching MCP tools:', error);
+    return {
+      foundTools: [],
+      searchSummary: 'Unable to search for MCP tools at this time.'
+    };
+  }
+}
+
+export async function suggestMCPToolsForAgent(agent: SubAgent) {
+  const installedTools = await getInstalledMCPTools();
+  
+  // Analyze agent's needs based on its system prompt and tools
+  const analysisPrompt = `Based on this agent configuration:
+Name: ${agent.name}
+Description: ${agent.description}
+Current Tools: ${agent.tools.join(', ')}
+System Prompt: ${agent.systemPrompt.substring(0, 300)}...
+
+Suggest MCP tools that would enhance this agent's capabilities. Consider:
+1. Database access (Supabase, PostgreSQL, MySQL)
+2. API integrations (GitHub, Slack, Discord)
+3. File system enhancements
+4. Web scraping tools
+5. Data processing tools
+
+Currently installed MCP tools: ${installedTools.join(', ')}
+
+Provide specific MCP server suggestions with rationale.`;
+
+  try {
+    const gen = query({
+      prompt: analysisPrompt,
+      options: {
+        maxTokens: 600,
+      },
+    });
+
+    let suggestions = '';
+    for await (const msg of gen) {
+      if (msg.type === 'assistant' && Array.isArray(msg.message.content)) {
+        suggestions += msg.message.content.map((block: { type: string; text?: string }) => block.text || '').join('');
+      }
+    }
+
+    // Log the analysis
+    await logPromptCompletion(
+      'suggestMCPToolsForAgent',
+      { agentName: agent.name, installedTools },
+      analysisPrompt,
+      suggestions.trim()
+    );
+
+    return {
+      suggestions: suggestions.trim(),
+      installedTools
+    };
+  } catch (error) {
+    console.error('Error suggesting MCP tools:', error);
+    return {
+      suggestions: 'Unable to analyze MCP tool needs.',
+      installedTools
+    };
   }
 }
 
