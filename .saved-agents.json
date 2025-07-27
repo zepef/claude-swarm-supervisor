@@ -1,22 +1,10 @@
 [
   {
     "name": "PDF Extractor",
-    "description": "A specialized PDF documents extractor",
+    "description": "This agent extracts all data from PDF files",
     "tools": [
-      "Bash",
-      "Write",
-      "Task"
+      "NotebookRead"
     ],
-    "systemPrompt": "The agent loads a PDF and convert it to an MD file. It writes the MD file to disk."
-  },
-  {
-    "name": "Trnaslator",
-    "description": "An agent to translate texts",
-    "tools": [
-      "Edit",
-      "Read",
-      "Write"
-    ],
-    "systemPrompt": "Translate the text from {language_from] to {language_to}. Save resulting translation to text file."
+    "systemPrompt": "Extract all data from PDF file ans store them into separate files of different formats for each type of media found in PDF."
   }
 ]

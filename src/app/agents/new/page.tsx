@@ -10,9 +10,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CompactToolSelector } from "@/components/compact-tool-selector"
 import { PromptEnhancer } from "@/components/prompt-enhancer"
 import { MCPToolSuggestions } from "@/components/mcp-tool-suggestions"
+import { IOSpecificationForm } from "@/components/io-specification"
+import { AgentTestRunner } from "@/components/agent-test-runner"
 import { saveAgent, enhanceAgentPrompt } from "@/app/actions"
-import { ArrowLeft, Bot, Save } from "lucide-react"
+import { ArrowLeft, Bot, Save, Play } from "lucide-react"
 import Link from "next/link"
+import { IOSpecification } from "@/lib/types"
 
 const agentSchema = z.object({
   name: z.string().min(1, "Agent name is required"),
@@ -26,6 +29,8 @@ export default function NewAgentPage() {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [selectedTools, setSelectedTools] = useState<string[]>([])
+  const [ioSpec, setIoSpec] = useState<IOSpecification>()
+  const [showTestRunner, setShowTestRunner] = useState(false)
   
   const {
     register,
@@ -50,6 +55,7 @@ export default function NewAgentPage() {
         description: data.description,
         tools: selectedTools,
         systemPrompt: data.systemPrompt,
+        ioSpec: ioSpec,
       }
       
       await saveAgent(agentData)
@@ -138,8 +144,14 @@ export default function NewAgentPage() {
                   name: watchName || "",
                   description: watchDescription || "",
                   tools: selectedTools,
-                  systemPrompt: watchSystemPrompt || ""
+                  systemPrompt: watchSystemPrompt || "",
+                  ioSpec: ioSpec
                 }}
+              />
+
+              <IOSpecificationForm
+                value={ioSpec}
+                onChange={setIoSpec}
               />
 
               <div>
@@ -168,6 +180,15 @@ export default function NewAgentPage() {
                   <Save className="h-4 w-4 mr-2" />
                   {saving ? "Saving..." : "Save Agent"}
                 </Button>
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  disabled={!watchName || !watchSystemPrompt}
+                  onClick={() => setShowTestRunner(true)}
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Test Agent
+                </Button>
                 <Link href="/agents">
                   <Button variant="outline">Cancel</Button>
                 </Link>
@@ -175,6 +196,24 @@ export default function NewAgentPage() {
             </form>
           </CardContent>
         </Card>
+        
+        {/* Test Runner Modal */}
+        {showTestRunner && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+            <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <AgentTestRunner
+                agent={{
+                  name: watchName || "Test Agent",
+                  description: watchDescription || "Testing agent",
+                  tools: selectedTools,
+                  systemPrompt: watchSystemPrompt || "",
+                  ioSpec: ioSpec
+                }}
+                onClose={() => setShowTestRunner(false)}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

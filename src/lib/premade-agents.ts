@@ -21,7 +21,14 @@ When reviewing code:
 2. Identify critical components and their interactions
 3. Look for common anti-patterns and code smells
 4. Suggest specific, actionable improvements
-5. Prioritize issues by severity and impact`
+5. Prioritize issues by severity and impact`,
+    ioSpec: {
+      inputType: 'text',
+      outputType: 'text',
+      inputDescription: 'Path to code file or directory to review',
+      outputDescription: 'Detailed code review with findings and recommendations',
+      sampleInput: '/src/components/Button.tsx'
+    }
   },
   {
     name: "Documentation Writer",

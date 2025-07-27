@@ -4,8 +4,9 @@ import { useState, useRef, useEffect } from "react"
 import { Check, ChevronDown, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { getAvailableMCPToolNames } from "@/app/actions"
 
-const AVAILABLE_TOOLS = [
+const CORE_TOOLS = [
   // Core Claude Code Tools
   { id: "Bash", name: "Bash", category: "System" },
   { id: "Edit", name: "Edit", category: "Files" },
@@ -22,15 +23,6 @@ const AVAILABLE_TOOLS = [
   { id: "ExitPlanMode", name: "Exit Plan Mode", category: "System" },
   { id: "NotebookRead", name: "Notebook Read", category: "Organization" },
   { id: "NotebookEdit", name: "Notebook Edit", category: "Organization" },
-  
-  // MCP Tools (if installed)
-  { id: "mcp__supabase__list_projects", name: "Supabase: List Projects", category: "MCP Database" },
-  { id: "mcp__supabase__execute_sql", name: "Supabase: Execute SQL", category: "MCP Database" },
-  { id: "mcp__supabase__list_tables", name: "Supabase: List Tables", category: "MCP Database" },
-  { id: "mcp__shadcn-ui-server__list_shadcn_components", name: "Shadcn: List Components", category: "MCP UI" },
-  { id: "mcp__shadcn-ui-server__get_component_details", name: "Shadcn: Component Details", category: "MCP UI" },
-  { id: "mcp__vibe_kanban__list_projects", name: "Kanban: List Projects", category: "MCP Project" },
-  { id: "mcp__vibe_kanban__create_task", name: "Kanban: Create Task", category: "MCP Project" },
 ]
 
 interface CompactToolSelectorProps {
@@ -40,6 +32,8 @@ interface CompactToolSelectorProps {
 
 export function CompactToolSelector({ selectedTools, onToolsChange }: CompactToolSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [availableTools, setAvailableTools] = useState(CORE_TOOLS)
+  const [mcpToolsLoaded, setMcpToolsLoaded] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -50,6 +44,45 @@ export function CompactToolSelector({ selectedTools, onToolsChange }: CompactToo
     }
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+  
+  // Load available MCP tools
+  useEffect(() => {
+    async function loadMCPTools() {
+      try {
+        const mcpToolIds = await getAvailableMCPToolNames()
+        if (mcpToolIds.length > 0) {
+          const mcpTools = mcpToolIds.map(id => {
+            // Generate readable names from tool IDs
+            const parts = id.split('__')
+            const server = parts[1] || ''
+            const action = parts[2] || ''
+            const readableName = action
+              .split('_')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' ')
+            
+            let category = 'MCP'
+            if (server.includes('supabase')) category = 'MCP Database'
+            else if (server.includes('shadcn')) category = 'MCP UI'
+            else if (server.includes('kanban')) category = 'MCP Project'
+            
+            return {
+              id,
+              name: `${server}: ${readableName}`,
+              category
+            }
+          })
+          
+          setAvailableTools([...CORE_TOOLS, ...mcpTools])
+          setMcpToolsLoaded(true)
+        }
+      } catch (error) {
+        console.error('Error loading MCP tools:', error)
+      }
+    }
+    
+    loadMCPTools()
   }, [])
 
   const toggleTool = (toolId: string) => {
@@ -71,11 +104,11 @@ export function CompactToolSelector({ selectedTools, onToolsChange }: CompactToo
   }
 
   // Group tools by category
-  const toolsByCategory = AVAILABLE_TOOLS.reduce((acc, tool) => {
+  const toolsByCategory = availableTools.reduce((acc, tool) => {
     if (!acc[tool.category]) acc[tool.category] = []
     acc[tool.category].push(tool)
     return acc
-  }, {} as Record<string, typeof AVAILABLE_TOOLS>)
+  }, {} as Record<string, typeof availableTools>)
 
   return (
     <div className="space-y-2">
@@ -91,7 +124,7 @@ export function CompactToolSelector({ selectedTools, onToolsChange }: CompactToo
             ) : (
               <div className="flex flex-wrap gap-1">
                 {selectedTools.map(toolId => {
-                  const tool = AVAILABLE_TOOLS.find(t => t.id === toolId)
+                  const tool = availableTools.find(t => t.id === toolId)
                   return (
                     <Badge 
                       key={toolId} 
@@ -130,15 +163,15 @@ export function CompactToolSelector({ selectedTools, onToolsChange }: CompactToo
               <button
                 type="button"
                 onClick={() => {
-                  if (selectedTools.length === AVAILABLE_TOOLS.length) {
+                  if (selectedTools.length === availableTools.length) {
                     onToolsChange([])
                   } else {
-                    onToolsChange(AVAILABLE_TOOLS.map(t => t.id))
+                    onToolsChange(availableTools.map(t => t.id))
                   }
                 }}
                 className="w-full text-left px-2 py-1.5 text-sm hover:bg-accent rounded transition-colors mb-2"
               >
-                {selectedTools.length === AVAILABLE_TOOLS.length ? "Deselect all" : "Select all"}
+                {selectedTools.length === availableTools.length ? "Deselect all" : "Select all"}
               </button>
               
               {Object.entries(toolsByCategory).map(([category, tools]) => (

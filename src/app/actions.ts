@@ -13,6 +13,15 @@ const MCP_CONFIG_FILE = path.join(process.cwd(), '.mcp.json');
 
 fs.ensureDirSync(AGENTS_DIR);
 
+// Helper function to sanitize names for file system
+function sanitizeFileName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 50);
+}
+
 // Logging function for prompts and completions
 async function logPromptCompletion(
   functionName: string,
@@ -46,6 +55,41 @@ ${completion}
 `;
 
   try {
+    // Check file size and rotate if needed (5MB limit)
+    const MAX_LOG_SIZE = 5 * 1024 * 1024; // 5MB
+    
+    if (await fs.pathExists(PROMPTS_LOG_FILE)) {
+      const stats = await fs.stat(PROMPTS_LOG_FILE);
+      
+      if (stats.size > MAX_LOG_SIZE) {
+        // Rotate the log file
+        const backupPath = PROMPTS_LOG_FILE.replace('.md', `-${Date.now()}.md`);
+        await fs.move(PROMPTS_LOG_FILE, backupPath);
+        
+        // Create new file with header
+        const header = `# Claude Swarm Supervisor - Prompts Log
+
+This file contains all AI prompts and completions generated during the project development.
+
+---
+
+## Format
+
+Each entry follows this structure:
+- **Timestamp**: When the prompt was executed
+- **Function**: Which function called the AI
+- **Context**: Additional context (agent name, tools, etc.)
+- **Prompt**: The prompt sent to the AI
+- **Completion**: The AI's response
+
+---
+
+## Prompt History
+`;
+        await fs.writeFile(PROMPTS_LOG_FILE, header);
+      }
+    }
+    
     await fs.appendFile(PROMPTS_LOG_FILE, entry);
   } catch (error) {
     console.error('Error logging prompt/completion:', error);
@@ -53,20 +97,56 @@ ${completion}
 }
 
 export async function createSwarm(swarm: Swarm) {
-  const swarmDir = path.join(AGENTS_DIR, swarm.name);
-  fs.ensureDirSync(swarmDir);
+  // Create in the proper Claude agents directory
+  const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+  const claudeAgentsDir = path.join(homeDir, '.claude', 'agents');
+  const sanitizedSwarmName = sanitizeFileName(swarm.name);
+  const swarmDir = path.join(claudeAgentsDir, sanitizedSwarmName);
+  
+  try {
+    // Ensure .claude/agents directory exists
+    fs.ensureDirSync(claudeAgentsDir, { recursive: true });
+    fs.ensureDirSync(swarmDir);
 
-  swarm.agents.forEach((agent: SubAgent) => {
-    const toolsStr = agent.tools ? agent.tools.join(', ') : '';
-    const yaml = `---
-name: ${agent.name}
+    swarm.agents.forEach((agent: SubAgent) => {
+      const toolsStr = agent.tools ? agent.tools.join(', ') : '';
+      const sanitizedAgentName = sanitizeFileName(agent.name);
+      const yaml = `---
+name: ${sanitizedAgentName}
 description: ${agent.description}
 ${toolsStr ? `tools: ${toolsStr}` : ''}
 ---\n\n${agent.systemPrompt}`;
-    fs.writeFileSync(path.join(swarmDir, `${agent.name}.md`), yaml);
-  });
+      fs.writeFileSync(path.join(swarmDir, `${sanitizedAgentName}.md`), yaml);
+    });
 
-  return { message: `Swarm created at ${swarmDir}. Place files in .claude/agents/ for use.` };
+    return { 
+      success: true,
+      message: `Swarm deployed to ${swarmDir}. Agents are ready to use!`,
+      path: swarmDir
+    };
+  } catch (error) {
+    // Fallback to temp directory if we can't write to .claude
+    const tempSwarmDir = path.join(AGENTS_DIR, sanitizedSwarmName);
+    fs.ensureDirSync(tempSwarmDir);
+    
+    swarm.agents.forEach((agent: SubAgent) => {
+      const toolsStr = agent.tools ? agent.tools.join(', ') : '';
+      const sanitizedAgentName = sanitizeFileName(agent.name);
+      const yaml = `---
+name: ${sanitizedAgentName}
+description: ${agent.description}
+${toolsStr ? `tools: ${toolsStr}` : ''}
+---\n\n${agent.systemPrompt}`;
+      fs.writeFileSync(path.join(tempSwarmDir, `${sanitizedAgentName}.md`), yaml);
+    });
+    
+    return { 
+      success: false,
+      message: `Created in temp directory: ${tempSwarmDir}. Manually move to ~/.claude/agents/`,
+      path: tempSwarmDir,
+      error: error instanceof Error ? error.message : 'Permission denied'
+    };
+  }
 }
 
 export async function launchSession(mainPrompt: string) {
@@ -146,7 +226,13 @@ export async function saveAgent(agent: SubAgent) {
     agents = await fs.readJson(SAVED_AGENTS_FILE);
   }
   
-  agents.push(agent);
+  // Ensure tools is always an array
+  const normalizedAgent = {
+    ...agent,
+    tools: Array.isArray(agent.tools) ? agent.tools : []
+  };
+  
+  agents.push(normalizedAgent);
   await fs.writeJson(SAVED_AGENTS_FILE, agents, { spaces: 2 });
   
   return { message: 'Agent saved successfully' };
@@ -167,7 +253,12 @@ export async function updateAgent(index: number, agent: SubAgent) {
   }
   
   if (index >= 0 && index < agents.length) {
-    agents[index] = agent;
+    // Ensure tools is always an array
+    const normalizedAgent = {
+      ...agent,
+      tools: Array.isArray(agent.tools) ? agent.tools : []
+    };
+    agents[index] = normalizedAgent;
     await fs.writeJson(SAVED_AGENTS_FILE, agents, { spaces: 2 });
     return { message: 'Agent updated successfully' };
   }
@@ -351,6 +442,52 @@ export async function getInstalledMCPTools() {
   }
 }
 
+export async function getAvailableMCPToolNames() {
+  try {
+    const installedServers = await getInstalledMCPTools();
+    const availableTools: string[] = [];
+    
+    // Map server names to their tool prefixes
+    const serverToolMap: Record<string, string[]> = {
+      'supabase': [
+        'mcp__supabase__list_projects',
+        'mcp__supabase__execute_sql',
+        'mcp__supabase__list_tables',
+        'mcp__supabase__get_project',
+        'mcp__supabase__create_project',
+        'mcp__supabase__list_branches',
+        'mcp__supabase__create_branch',
+        'mcp__supabase__apply_migration',
+        'mcp__supabase__generate_typescript_types'
+      ],
+      'shadcn-ui-server': [
+        'mcp__shadcn-ui-server__list_shadcn_components',
+        'mcp__shadcn-ui-server__get_component_details',
+        'mcp__shadcn-ui-server__get_component_examples',
+        'mcp__shadcn-ui-server__search_components'
+      ],
+      'vibe_kanban': [
+        'mcp__vibe_kanban__list_projects',
+        'mcp__vibe_kanban__create_task',
+        'mcp__vibe_kanban__list_tasks',
+        'mcp__vibe_kanban__update_task',
+        'mcp__vibe_kanban__delete_task'
+      ]
+    };
+    
+    installedServers.forEach(server => {
+      if (serverToolMap[server]) {
+        availableTools.push(...serverToolMap[server]);
+      }
+    });
+    
+    return availableTools;
+  } catch (error) {
+    console.error('Error getting available MCP tools:', error);
+    return [];
+  }
+}
+
 export async function searchMCPTools(toolNames: string[]) {
   const searchPrompt = `You are the Tool Discovery Agent. Search for MCP (Model Context Protocol) tools/servers that match these capabilities: ${toolNames.join(', ')}. 
 
@@ -479,6 +616,163 @@ Provide specific MCP server suggestions with rationale.`;
     return {
       suggestions: 'Unable to analyze MCP tool needs.',
       installedTools
+    };
+  }
+}
+
+// Agent Testing/Running Functions
+export async function testAgent(agent: SubAgent, input: string, inputFile?: { name: string; content: string }) {
+  // Prepare the test prompt based on agent's IO specification
+  let testPrompt = '';
+  
+  if (agent.ioSpec?.inputType === 'file' && inputFile) {
+    testPrompt = `You are testing the agent "${agent.name}". 
+    
+File Input: ${inputFile.name}
+File Content:
+\`\`\`
+${inputFile.content}
+\`\`\`
+
+Task: ${input || agent.ioSpec.inputDescription || 'Process this file according to your system prompt.'}`;
+  } else if (agent.ioSpec?.inputType === 'json') {
+    testPrompt = `You are testing the agent "${agent.name}".
+    
+JSON Input:
+\`\`\`json
+${input}
+\`\`\`
+
+Task: Process this JSON according to your system prompt.`;
+  } else {
+    testPrompt = input || agent.ioSpec?.sampleInput || 'Test the agent functionality according to its system prompt.';
+  }
+
+  try {
+    const gen = query({
+      prompt: testPrompt,
+      options: {
+        maxTokens: 2000,
+        appendSystemPrompt: agent.systemPrompt,
+      },
+    });
+
+    let output = '';
+    let sessionId = '';
+    
+    for await (const msg of gen) {
+      if (msg.type === 'system' && msg.subtype === 'init') {
+        sessionId = msg.session_id;
+      } else if (msg.type === 'assistant' && Array.isArray(msg.message.content)) {
+        output += msg.message.content.map((block: { type: string; text?: string }) => block.text || '').join('');
+      }
+    }
+
+    // Log the test
+    await logPromptCompletion(
+      'testAgent',
+      { agentName: agent.name, inputType: agent.ioSpec?.inputType },
+      testPrompt,
+      output.trim()
+    );
+
+    // Process output based on output type
+    let processedOutput: any = {
+      raw: output.trim(),
+      type: agent.ioSpec?.outputType || 'text',
+      sessionId
+    };
+
+    if (agent.ioSpec?.outputType === 'json') {
+      try {
+        const jsonMatch = output.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+        if (jsonMatch) {
+          processedOutput.json = JSON.parse(jsonMatch[0]);
+          processedOutput.formatted = JSON.stringify(processedOutput.json, null, 2);
+        }
+      } catch (e) {
+        processedOutput.error = 'Failed to parse JSON output';
+      }
+    } else if (agent.ioSpec?.outputType === 'file') {
+      // Extract file content if the agent generated file-like output
+      const fileMatch = output.match(/```[\w]*\n([\s\S]*?)\n```/);
+      if (fileMatch) {
+        processedOutput.fileContent = fileMatch[1];
+        processedOutput.suggestedFileName = `output-${Date.now()}.txt`;
+      }
+    }
+
+    return {
+      success: true,
+      output: processedOutput,
+      executionTime: Date.now(),
+      sessionId: sessionId || undefined,
+    };
+  } catch (error) {
+    console.error('Error testing agent:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      executionTime: Date.now(),
+    };
+  }
+}
+
+export async function continueAgentTest(sessionId: string, agent: SubAgent, input: string) {
+  try {
+    const gen = query({
+      prompt: input,
+      options: {
+        resume: sessionId,
+      },
+    });
+
+    let output = '';
+    for await (const msg of gen) {
+      if (msg.type === 'assistant' && Array.isArray(msg.message.content)) {
+        output += msg.message.content.map((block: { type: string; text?: string }) => block.text || '').join('');
+      }
+    }
+
+    // Log the continuation
+    await logPromptCompletion(
+      'continueAgentTest',
+      { agentName: agent.name, sessionId },
+      input,
+      output.trim()
+    );
+
+    // Process output based on agent's output type
+    let processedOutput: any = {
+      raw: output.trim(),
+      type: agent.ioSpec?.outputType || 'text',
+      sessionId
+    };
+
+    if (agent.ioSpec?.outputType === 'json') {
+      try {
+        const jsonMatch = output.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+        if (jsonMatch) {
+          processedOutput.json = JSON.parse(jsonMatch[0]);
+          processedOutput.formatted = JSON.stringify(processedOutput.json, null, 2);
+        }
+      } catch (e) {
+        processedOutput.error = 'Failed to parse JSON output';
+      }
+    }
+
+    return {
+      success: true,
+      output: processedOutput,
+      executionTime: Date.now(),
+      sessionId,
+    };
+  } catch (error) {
+    console.error('Error continuing agent test:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      executionTime: Date.now(),
     };
   }
 }

@@ -10,9 +10,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CompactToolSelector } from "@/components/compact-tool-selector"
 import { PromptEnhancer } from "@/components/prompt-enhancer"
 import { MCPToolSuggestions } from "@/components/mcp-tool-suggestions"
+import { IOSpecificationForm } from "@/components/io-specification"
+import { AgentTestRunner } from "@/components/agent-test-runner"
 import { updateAgent, getAgents, enhanceAgentPrompt } from "@/app/actions"
-import { ArrowLeft, Bot, Save } from "lucide-react"
+import { ArrowLeft, Bot, Save, Play } from "lucide-react"
 import Link from "next/link"
+import { IOSpecification } from "@/lib/types"
 
 const agentSchema = z.object({
   name: z.string().min(1, "Agent name is required"),
@@ -27,6 +30,8 @@ export default function EditAgentPage({ params }: { params: { index: string } })
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [selectedTools, setSelectedTools] = useState<string[]>([])
+  const [ioSpec, setIoSpec] = useState<IOSpecification>()
+  const [showTestRunner, setShowTestRunner] = useState(false)
   const agentIndex = parseInt(params.index)
   
   const {
@@ -68,6 +73,11 @@ export default function EditAgentPage({ params }: { params: { index: string } })
             const toolsArray = agent.tools.split(",").map(t => t.trim()).filter(t => t)
             setSelectedTools(toolsArray)
           }
+          
+          // Load IO spec
+          if (agent.ioSpec) {
+            setIoSpec(agent.ioSpec)
+          }
         }
       } catch (error) {
         console.error("Error loading agent:", error)
@@ -87,6 +97,7 @@ export default function EditAgentPage({ params }: { params: { index: string } })
         description: data.description,
         tools: selectedTools,
         systemPrompt: data.systemPrompt,
+        ioSpec: ioSpec,
       }
       
       await updateAgent(agentIndex, agentData)
@@ -196,8 +207,14 @@ export default function EditAgentPage({ params }: { params: { index: string } })
                   name: watchName || "",
                   description: watchDescription || "",
                   tools: selectedTools,
-                  systemPrompt: watchSystemPrompt || ""
+                  systemPrompt: watchSystemPrompt || "",
+                  ioSpec: ioSpec
                 }}
+              />
+
+              <IOSpecificationForm
+                value={ioSpec}
+                onChange={setIoSpec}
               />
 
               <div>
@@ -226,6 +243,15 @@ export default function EditAgentPage({ params }: { params: { index: string } })
                   <Save className="h-4 w-4 mr-2" />
                   {saving ? "Saving..." : "Save Changes"}
                 </Button>
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  disabled={!watchName || !watchSystemPrompt}
+                  onClick={() => setShowTestRunner(true)}
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Test Agent
+                </Button>
                 <Link href="/agents">
                   <Button variant="outline">Cancel</Button>
                 </Link>
@@ -233,6 +259,24 @@ export default function EditAgentPage({ params }: { params: { index: string } })
             </form>
           </CardContent>
         </Card>
+        
+        {/* Test Runner Modal */}
+        {showTestRunner && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+            <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <AgentTestRunner
+                agent={{
+                  name: watchName || "Test Agent",
+                  description: watchDescription || "Testing agent",
+                  tools: selectedTools,
+                  systemPrompt: watchSystemPrompt || "",
+                  ioSpec: ioSpec
+                }}
+                onClose={() => setShowTestRunner(false)}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

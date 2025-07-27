@@ -4,12 +4,15 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Users, Edit, Trash2, Bot } from "lucide-react"
+import { Plus, Users, Edit, Trash2, Bot, Play, FileJson, Terminal } from "lucide-react"
 import { getAgents, deleteAgent as deleteAgentServer } from "@/app/actions"
+import { AgentTestRunner } from "@/components/agent-test-runner"
+import { Badge } from "@/components/ui/badge"
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [testingAgent, setTestingAgent] = useState<any>(null)
 
   useEffect(() => {
     async function loadAgents() {
@@ -131,34 +134,53 @@ export default function AgentsPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="mb-4">
-                    <p className="text-sm text-muted-foreground mb-2">Tools:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {(() => {
-                        const toolsArray = Array.isArray(agent.tools) 
-                          ? agent.tools 
-                          : agent.tools?.split(",").map((t: string) => t.trim()).filter((t: string) => t) || []
-                        
-                        return toolsArray.length > 0 ? (
-                          toolsArray.map((tool: string, i: number) => (
-                            <span 
-                              key={i} 
-                              className="px-2 py-1 text-xs bg-cyan-500/10 text-cyan-400 rounded-md border border-cyan-500/20"
-                            >
-                              {tool}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-xs text-muted-foreground">No tools specified</span>
-                        )
-                      })()}
+                  <div className="mb-4 space-y-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">Tools:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {(() => {
+                          const toolsArray = Array.isArray(agent.tools) 
+                            ? agent.tools 
+                            : agent.tools?.split(",").map((t: string) => t.trim()).filter((t: string) => t) || []
+                          
+                          return toolsArray.length > 0 ? (
+                            toolsArray.map((tool: string, i: number) => (
+                              <span 
+                                key={i} 
+                                className="px-2 py-1 text-xs bg-cyan-500/10 text-cyan-400 rounded-md border border-cyan-500/20"
+                              >
+                                {tool}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground">No tools specified</span>
+                          )
+                        })()}
+                      </div>
                     </div>
+                    
+                    {agent.ioSpec && (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs">
+                          <Terminal className="h-3 w-3 mr-1" />
+                          {agent.ioSpec.inputType || 'text'} → {agent.ioSpec.outputType || 'text'}
+                        </Badge>
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2">
-                    <Link href={`/agents/edit/${index}`} className="flex-1">
-                      <Button variant="outline" size="sm" className="w-full">
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setTestingAgent(agent)}
+                      className="flex-1"
+                    >
+                      <Play className="h-4 w-4 mr-2" />
+                      Test
+                    </Button>
+                    <Link href={`/agents/edit/${index}`}>
+                      <Button variant="outline" size="sm">
+                        <Edit className="h-4 w-4" />
                       </Button>
                     </Link>
                     <Button 
@@ -173,6 +195,18 @@ export default function AgentsPage() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+        
+        {/* Test Runner Modal */}
+        {testingAgent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+            <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <AgentTestRunner
+                agent={testingAgent}
+                onClose={() => setTestingAgent(null)}
+              />
+            </div>
           </div>
         )}
       </div>
